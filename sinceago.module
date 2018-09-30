@@ -1,0 +1,159 @@
+<?php
+
+/**
+ * @file
+ * Contains sinceago.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+
+define('TIMEAGO_LIBRARY_WEBSITE', 'http://timeago.yarp.com/');
+if (!defined('TIMEAGO_LIBRARY_FILENAME')) {
+  define('TIMEAGO_LIBRARY_FILENAME', 'jquery.timeago.js');
+}
+if (!defined('TIMEAGO_LIBRARY_DOWNLOAD_URL')) {
+  define('TIMEAGO_LIBRARY_DOWNLOAD_URL', 'http://timeago.yarp.com/jquery.timeago.js');
+}
+define('TIMEAGO_FORMAT_SHORT_US', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">n/j/y - g:ia</\s\p\a\n>');
+define('TIMEAGO_FORMAT_SHORT', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">d/m/Y - H:i</\s\p\a\n>');
+define('TIMEAGO_FORMAT_MEDIUM_US', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">D, n/j/Y - g:ia</\s\p\a\n>');
+define('TIMEAGO_FORMAT_MEDIUM', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">D, d/m/Y - H:i</\s\p\a\n>');
+define('TIMEAGO_FORMAT_LONG_US', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">l, F j, Y - g:ia</\s\p\a\n>');
+define('TIMEAGO_FORMAT_LONG', '<\s\p\a\n \c\l\a\s\s="\t\i\m\e\a\g\o" \t\i\t\l\e="c">l, j F Y - H:i</\s\p\a\n>');
+
+
+/**
+ * Implements hook_help().
+ */
+function sinceago_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the sinceago module.
+    case 'help.page.sinceago':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Converts dynamic timetamps to a &#039;time ago&#039; format using jQuery with graceful degredation.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_process_node().
+ *
+ * We have to use process instead of preprocess because some themes (notably
+ * bartik) override $variables['submitted'] in their preprocess implementations
+ * which can result in something like "published by admin on 10 minutes ago."
+ */
+function sinceago_preprocess_node(&$variables) {
+  $config = \Drupal::config('sinceago.sinceago');
+  //print_r($config->get('sinceago_node'));die;
+  if ($config->get('sinceago_node')) {
+    $node = $variables['node'];
+    $date = $variables['node']->getCreatedTime();
+    $type = $variables['node']->getType();
+
+    $date_formatter = \Drupal::service('date.formatter');
+
+    //kint($variables);
+    // $variables['date'] = $date_formatter->formatDiff(REQUEST_TIME - $date, REQUEST_TIME, [
+    //   'granularity' => 1,
+    //   'return_as_object' => TRUE,
+    // ]);
+
+    // Here you can use drupal's format_date() function, or some custom php date formatting.
+  $created = \Drupal::service('date.formatter')->formatInterval(REQUEST_TIME - $date);
+  $variables['submitted'] = t('@username commented !datetime', array('@username' => 'arulraj', '!datetime' => '<span class="comments-ago">' . $created . ' ago </span>'));
+
+
+    $variables['foo'] = $date_formatter->formatDiff(REQUEST_TIME - 12345, REQUEST_TIME, [
+      'granularity' => 1,
+      'return_as_object' => TRUE,
+    ]);
+
+    $variables['foo'] = '<time class="timeago" datetime="2008-07-17T09:24:17Z">July 17, 2008</time>';
+
+
+
+    //$variables['date'] = timeago_format_date($date, $variables['date']);
+
+    //print_r($variables['date']);die;
+   // if (variable_get('node_submitted_' . $node->type, TRUE)) {
+     // $variables['submitted'] = t('Submitted by !username !datetime', array('!username' => $variables['name'], '!datetime' => $variables['date']));
+   // }
+  }
+}
+
+/**
+ * Implements hook_preprocess_comment().
+ */
+function sinceago_preprocess_comment(&$variables) {
+  // if (variable_get('timeago_comment', 1)) {
+  //   $comment = $variables['comment'];
+  //   $variables['created'] = timeago_format_date($comment->created, $variables['created']);
+  //   $variables['changed'] = timeago_format_date($comment->changed, $variables['changed']);
+  //   $variables['submitted'] = t('Submitted by !username !datetime', array('!username' => $variables['author'], '!datetime' => $variables['created']));
+  // }
+}
+
+
+/**
+ * Converts a timestamp into a Timeago date.
+ *
+ * @param $timestamp
+ *   A UNIX timestamp.
+ * @param $date
+ *   (Optional) A human-readable date (will be displayed if JS is disabled).
+ *   If not provided, the site default date format is used.
+ * @return
+ *   HTML representing a Timeago-friendly date.
+ */
+function timeago_format_date($timestamp, $date = NULL) {
+  // Add the Timeago JS.
+  $config = \Drupal::config('sinceago.sinceago');
+  //timeago_add_js();
+  // The fallback date isn't set, so we have to generate it ourselves.
+  if (!isset($date)) {
+    // If the date format is already set to Timeago, we need to set it to
+    // something else or we'll end up with two timeago wrappers.
+    $date_format_medium = variable_get('date_format_medium', 'D, m/d/Y - H:i');
+    if ($date_format_medium == TIMEAGO_FORMAT_MEDIUM_US) {
+      $date_format_medium = 'D, n/j/Y - g:ia';
+    }
+    elseif ($date_format_medium == TIMEAGO_FORMAT_MEDIUM) {
+      $date_format_medium = 'D, d/m/Y - H:i';
+    }
+    else {
+      $date = format_date($timestamp, 'custom', $date_format_medium);
+    }
+  }
+  // If the date passed in is already a Timeago date, just return that.
+  elseif (strpos($date, 'class="timeago"') !== FALSE) {
+    return $date;
+  }
+  // Construct the Timeago element.
+  $elem = $config->get('timeago_elem');
+  //print_r($timestamp);die;
+  //$time = format_date($timestamp, 'custom', 'c');
+  //if ($elem == 'time') {
+    return '<time class="timeago" datetime="' . $time . '">' . $date . '</time>';
+  //}
+  //else {
+   // return '<' . $elem . ' class="timeago" title="' . $time . '">' . $date . '</' . $elem . '>';
+  //}
+  //return $date;
+}
+
+function sinceago_page_attachments(array &$attachments) {//die('page attachments');
+    $attachments['#attached']['library'][] = 'sinceago/drupal.sinceago';
+
+    $settings = array(
+      'refreshMillis' => 60000,
+      'allowFuture' => false,
+      'localeTitle' => false,
+      'cutoff' => 0,
+    );
+
+    $attachments['#attached']['drupalSettings']['sinceago'] = $settings;
+}
