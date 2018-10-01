@@ -126,7 +126,7 @@
       return new Date(s);
     },
     datetime: function(elem) {
-		alert('i am here');
+		//alert('i am here');
       var iso8601 = $t.isTime(elem) ? $(elem).attr("datetime") : $(elem).attr("content");
       return $t.parse(iso8601);
     },

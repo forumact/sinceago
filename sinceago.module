@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Component\Utility\Html;
 
 
 define('TIMEAGO_LIBRARY_WEBSITE', 'http://timeago.yarp.com/');
@@ -156,4 +157,16 @@ function sinceago_page_attachments(array &$attachments) {//die('page attachments
     );
 
     $attachments['#attached']['drupalSettings']['sinceago'] = $settings;
+}
+
+
+function sinceago_preprocess_field__node__created(&$variables) {   
+  // Get a few convenient handles.
+  $create = $variables['element']['#object']->get('created')->getValue();
+  $create
+  $entity = $variables['element']['#object'];
+  $field_name = $variables['element']['#field_name'];
+  $view_mode = $variables['element']['#view_mode'];
+  $variables['attributes']['class'][] = Html::escape('node-sinceago');
+  $variables['attributes']['id'][] = 'timeago';  
 }
